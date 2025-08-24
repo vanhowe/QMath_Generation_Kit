@@ -35,27 +35,34 @@ Both scripts require an API key to function. Open the generate_quizzes.py and ge
 COMMERCIAL_API_KEY = "YOUR_API_KEY_HERE" 
 COMMERCIAL_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1" # Or your endpoint
 ```
-
-# 3. Run the Quiz Generation Script
-This script will read the OpenR1-Math-220k dataset, select the best reasoning trace for each problem, and call an API to generate a 5-question quiz.
+# 3. Run the Data Preparation Script
+This is the first step. This script will download the OpenR1-Math-220k dataset, filter it to keep only problems with purely numeric answers, and select the best reasoning trace for each problem.
 
 To run the script, open your terminal and execute:
 ```
-python generate_quizzes.py
+python prepare_dataset.py
 ```
-You can configure the number of problems to process and the number of concurrent API calls by editing the variables at the top of the generate_quizzes.py script.
+Output: This will produce a file named preprocessed_numeric_data.jsonl. This file is the input for the next step.
 
-Output: This will produce a file named OpenR1-Math_with_quizzes.jsonl.
-
-# 4. Run the Trace Generation and Scoring Script
-This script takes the output from the previous step and performs the main evaluation. For each problem, it will use a portfolio of models to generate new reasoning traces and then grade each one against the quiz.
+# 4. Run the Quiz Generation Script
+After the data preparation is complete, you can generate the quizzes. This script reads the clean preprocessed_numeric_data.jsonl file and calls an API to generate a 5-question quiz for each entry.
 
 To run the script, execute:
 ```
-python generate_traces_and_grade.py
+python generate_quizzes.py
 ```
+Output: This will produce a final file named data_with_quizzes.jsonl, which contains the fully augmented dataset.
+
+# 5: Run the generate_traces_and_grade.py Script
+```
+generate_traces_and_grade.py
+```
+
+
 Output: This will produce two files:
 
 run_details_{TIMESTAMP}.jsonl: A detailed log of every generated trace and its score.
-
 run_overview_{TIMESTAMP}.json: A high-level summary of the run's performance.
+
+Output: This will produce a final file named data_with_quizzes.jsonl, which contains the fully augmented dataset.
+
