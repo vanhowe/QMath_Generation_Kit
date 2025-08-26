@@ -76,7 +76,7 @@ First, you need to install the command-line tool. If you are still in the same P
 
 Open your terminal and run:
 ```
-pip install aliyunpan-cli
+pip install aliyunpan
 ```
 # Step 2: Log In to Your Aliyun Pan Account
 The tool needs to be linked to an Aliyun Pan account. The first time you use it, you will need to log in.
