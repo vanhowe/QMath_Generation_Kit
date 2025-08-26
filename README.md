@@ -60,9 +60,74 @@ generate_traces_and_grade.py
 
 
 Output: This will produce two files:
-
+```
 run_details_{TIMESTAMP}.jsonl: A detailed log of every generated trace and its score.
 run_overview_{TIMESTAMP}.json: A high-level summary of the run's performance.
-
+```
 Output: This will produce a final file named data_with_quizzes.jsonl, which contains the fully augmented dataset.
 
+# Uploading Results
+This guide provides the final step for collaborators after successfully running the data generation scripts. The following instructions detail how to upload your results to a shared Aliyun Pan (阿里云盘) folder so the primary researcher can access them for analysis and publication.
+
+We will use an open-source command-line tool called aliyunpan-cli.
+
+# Step 1: Install the Aliyun Pan Uploader
+First, you need to install the command-line tool. If you are still in the same Python virtual environment (qmath_env), you can install it directly.
+
+Open your terminal and run:
+```
+pip install aliyunpan-cli
+```
+# Step 2: Log In to Your Aliyun Pan Account
+The tool needs to be linked to an Aliyun Pan account. The first time you use it, you will need to log in.
+
+Run the login command:
+```
+aliyunpan login
+```
+The tool will display a QR code in your terminal. Use the Aliyun Pan mobile app to scan this QR code to authorize the command-line tool.
+
+# Step 3: Create a Designated Upload Folder
+To keep our research data organized, please create a specific folder in your Aliyun Pan drive.
+
+Run the "make directory" command to create a folder named QMath_Runs:
+```
+aliyunpan mkdir QMath_Runs
+```
+If the folder already exists, this command will safely do nothing.
+
+# Step 4: Upload Your Generated Files
+After you have successfully run the generate_traces_and_grade.py script, you will have two output files in your directory with a unique timestamp, for example:
+
+run_details_20250819_043000.jsonl
+
+run_overview_20250819_043000.json
+
+You can upload both of these files to the QMath_Runs folder you just created.
+
+Navigate to your QMath-Generation-Kit directory in the terminal.
+
+Run the following two commands. The * wildcard will automatically find the correct timestamped files.
+
+# Upload the detailed results log
+```
+aliyunpan upload run_details_*.jsonl QMath_Runs/
+```
+# Upload the summary report
+```
+aliyunpan upload run_overview_*.json QMath_Runs/
+```
+You will see a progress bar as the files are uploaded.
+
+# Step 5: Share the Folder Link
+Once the uploads are complete, the final step is to share the results.
+
+Go to your Aliyun Pan account in your web browser or mobile app.
+
+Find the QMath_Runs folder.
+
+Create a share link for the entire folder.
+
+Send this link to the primary researcher.
+
+Thank you for your contribution to the QMath project!
