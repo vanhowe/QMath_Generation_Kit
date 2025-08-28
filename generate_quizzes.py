@@ -18,7 +18,7 @@ QUIZ_GENERATOR_MODEL = "deepseek-r1"
 # This script reads from the 'processed' directory and writes to the 'with_quizzes' directory
 INPUT_DIR = "data/processed/"
 OUTPUT_DIR = "data/with_quizzes/"
-CONCURRENT_REQUESTS = 10
+CONCURRENT_REQUESTS = 50 # set higher to faster 
 
 # --- API Client and Helper Functions ---
 client = OpenAI(api_key=COMMERCIAL_API_KEY, base_url=COMMERCIAL_API_URL, max_retries=2)
