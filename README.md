@@ -26,7 +26,7 @@ QMath-Generation-Kit/
 ```
 
 # 2. The Full 5-Step Workflow
-Step 1: Initial Setup
+# Step 1: Initial Setup
 This step only needs to be done once.
 
 A. Download the Data:
@@ -38,14 +38,14 @@ python -m venv qmath_env
 source qmath_env/bin/activate
 pip install -r requirements.txt
 ```
-Step 2: Prepare and Chunk the Dataset
+# Step 2: Prepare and Chunk the Dataset
 This script finds all raw Parquet files in data/raw/, filters them for problems with purely numeric answers, and saves the clean, standardized output into new chunk files in the data/processed/ directory.
 
 Run the script:
 ```
 python prepare_dataset.py
 ```
-Step 3: Generate Quizzes for Each Chunk
+# Step 3: Generate Quizzes for Each Chunk
 This script finds all the processed chunks from the previous step and generates a diagnostic quiz for each problem, saving the augmented chunks to data/with_quizzes/.
 
 A. Configure your API Key:
@@ -55,7 +55,7 @@ B. Run the script:
 ```
 python generate_quizzes.py
 ```
-Step 4: Generate and Score Traces
+# Step 4: Generate and Score Traces
 This is the main data generation phase. It will process each quiz chunk sequentially.
 
 A. Deploy Local Models:
@@ -73,7 +73,7 @@ python generate_traces_and_grade.py
 ```
 This will read from data/with_quizzes/ and save result chunks to results/details/.
 
-Step 5: Merge and Upload Your Final Results (optional)
+# Step 5: Merge and Upload Your Final Results (optional)
 A. Merge the Result Chunks:
 Combine all the detailed log chunks into a single file.
 ```
