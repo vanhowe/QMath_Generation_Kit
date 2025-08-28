@@ -1,133 +1,99 @@
-# QMath_Generation_Kit
-QMath Generation Kit
-This repository contains the scripts and prompts necessary to perform two key tasks for the QMath research project:
+## QMath Generation Kit - Collaborator Guide
+# 1. Project Overview
+Welcome to the QMath project! This repository contains a suite of scripts to build a high-quality dataset for training mathematical reasoning models. The pipeline is designed to be run by a collaborator with access to a local GPU cluster.
 
-Quiz Generation: Augmenting a math problem dataset with diagnostic quizzes.
+Important Note on Large Datasets: This pipeline is designed to handle very large datasets by processing them as a series of individual .parquet files. This file-based chunking keeps memory usage low and makes the entire process robust and resumable.
 
-Trace Generation & Scoring: Generating multiple reasoning traces for each problem and scoring them against the generated quiz.
+The workflow is broken down into a clear directory structure and a series of scripts that must be run in order.
 
-Step-by-Step Instructions
+Directory Structure
+Before you begin, ensure your repository has the following directory structure. You will need to create these folders.
+```
+QMath-Generation-Kit/
+├── data/
+│   ├── raw/              <-- Place downloaded .parquet files here
+│   ├── processed/        <-- Script 1 (prepare) output goes here
+│   └── with_quizzes/     <-- Script 2 (quiz gen) output goes here
+├── results/
+│   ├── details/          <-- Script 3 (trace gen) output chunks go here
+│   └── overview/         <-- Script 3 summary goes here
+├── prepare_dataset.py      # Script 1
+├── generate_quizzes.py     # Script 2
+├── generate_traces_and_grade.py # Script 3
+├── deploy_local_models.sh
+...
 
-# 1. Setup Your Environment
-First, you need to set up a Python environment and install the required libraries.
+```
 
-# Create a new virtual environment (recommended)
+# 2. The Full 5-Step Workflow
+Step 1: Initial Setup
+This step only needs to be done once.
+
+A. Download the Data:
+Manually download the open-r1/OpenR1-Math-220k dataset files. Place all the .parquet files (e.g., 0000.parquet, 0001.parquet, etc.) into the data/raw/ directory.
+
+B. Create a Python Environment:
 ```
 python -m venv qmath_env
 source qmath_env/bin/activate
-```
-
-# Install the necessary libraries
-```
 pip install -r requirements.txt
 ```
+Step 2: Prepare and Chunk the Dataset
+This script finds all raw Parquet files in data/raw/, filters them for problems with purely numeric answers, and saves the clean, standardized output into new chunk files in the data/processed/ directory.
 
-You will also need to log in to your Hugging Face account to download the dataset. If you haven't already, run this command and enter your token:
-```
-huggingface-cli login
-```
-
-# 2. Configure Your API Credentials
-Both scripts require an API key to function. Open the generate_quizzes.py and generate_traces_and_grade.py files and locate the configuration section at the top. You must replace the placeholder API key with your own.
-
-# In both .py files, find this section:
-```
-COMMERCIAL_API_KEY = "YOUR_API_KEY_HERE" 
-COMMERCIAL_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1" # Or your endpoint
-```
-# 3. Run the Data Preparation Script
-This is the first step. This script will download the OpenR1-Math-220k dataset, filter it to keep only problems with purely numeric answers, and select the best reasoning trace for each problem.
-
-To run the script, open your terminal and execute:
+Run the script:
 ```
 python prepare_dataset.py
 ```
-Output: This will produce a file named preprocessed_numeric_data.jsonl. This file is the input for the next step.
+Step 3: Generate Quizzes for Each Chunk
+This script finds all the processed chunks from the previous step and generates a diagnostic quiz for each problem, saving the augmented chunks to data/with_quizzes/.
 
-# 4. Run the Quiz Generation Script
-After the data preparation is complete, you can generate the quizzes. This script reads the clean preprocessed_numeric_data.jsonl file and calls an API to generate a 5-question quiz for each entry.
+A. Configure your API Key:
+Open generate_quizzes.py and fill in your commercial API key.
 
-To run the script, execute:
+B. Run the script:
 ```
 python generate_quizzes.py
 ```
-Output: This will produce a final file named data_with_quizzes.jsonl, which contains the fully augmented dataset.
+Step 4: Generate and Score Traces
+This is the main data generation phase. It will process each quiz chunk sequentially.
 
-# 5: Run the generate_traces_and_grade.py Script
+A. Deploy Local Models:
+Use the provided script to launch the local "peer" and "student" models on your cluster.
 ```
-generate_traces_and_grade.py
+chmod +x deploy_local_models.sh
+./deploy_local_models.sh
 ```
+B. Configure the Evaluation Script:
+Open generate_traces_and_grade.py, fill in your GRADER_API_KEY, and ensure the local API URLs are correct.
 
-
-Output: This will produce two files:
+C. Run the script:
 ```
-run_details_{TIMESTAMP}.jsonl: A detailed log of every generated trace and its score.
-run_overview_{TIMESTAMP}.json: A high-level summary of the run's performance.
+python generate_traces_and_grade.py
 ```
-Output: This will produce a final file named data_with_quizzes.jsonl, which contains the fully augmented dataset.
+This will read from data/with_quizzes/ and save result chunks to results/details/.
 
-# Uploading Results
-This guide provides the final step for collaborators after successfully running the data generation scripts. The following instructions detail how to upload your results to a shared Aliyun Pan (阿里云盘) folder so the primary researcher can access them for analysis and publication.
-
-We will use an open-source command-line tool called aliyunpan-cli.
-
-# Step 1: Install the Aliyun Pan Uploader
-First, you need to install the command-line tool. If you are still in the same Python virtual environment (qmath_env), you can install it directly.
-
-Open your terminal and run:
+Step 5: Merge and Upload Your Final Results (optional)
+A. Merge the Result Chunks:
+Combine all the detailed log chunks into a single file.
 ```
-pip install aliyunpan
+python merge_results.py
 ```
-# Step 2: Log In to Your Aliyun Pan Account
-The tool needs to be linked to an Aliyun Pan account. The first time you use it, you will need to log in.
+This creates final_merged_run_details.jsonl.
 
-Run the login command:
+B. Upload the Final Files:
+Use the aliyunpan-cli tool to upload the final merged details file and the final overview report.
+
+# Log in if you haven't already
 ```
-aliyunpan login
+aliyunpan login --refresh-token <YOUR_REFRESH_TOKEN_HERE>
 ```
-The tool will display a QR code in your terminal. Use the Aliyun Pan mobile app to scan this QR code to authorize the command-line tool.
-
-# Step 3: Create a Designated Upload Folder
-To keep our research data organized, please create a specific folder in your Aliyun Pan drive.
-
-Run the "make directory" command to create a folder named QMath_Runs:
+# Upload your two output files
 ```
-aliyunpan mkdir QMath_Runs
-```
-If the folder already exists, this command will safely do nothing.
-
-# Step 4: Upload Your Generated Files
-After you have successfully run the generate_traces_and_grade.py script, you will have two output files in your directory with a unique timestamp, for example:
-
-run_details_20250819_043000.jsonl
-
-run_overview_20250819_043000.json
-
-You can upload both of these files to the QMath_Runs folder you just created.
-
-Navigate to your QMath-Generation-Kit directory in the terminal.
-
-Run the following two commands. The * wildcard will automatically find the correct timestamped files.
-
-# Upload the detailed results log
-```
-aliyunpan upload run_details_*.jsonl QMath_Runs/
-```
-# Upload the summary report
-```
+aliyunpan upload final_merged_run_details.jsonl QMath_Runs/
 aliyunpan upload run_overview_*.json QMath_Runs/
 ```
-You will see a progress bar as the files are uploaded.
-
-# Step 5: Share the Folder Link
-Once the uploads are complete, the final step is to share the results.
-
-Go to your Aliyun Pan account in your web browser or mobile app.
-
-Find the QMath_Runs folder.
-
-Create a share link for the entire folder.
-
-Send this link to the primary researcher.
+C. Share the Folder Link:
+Create a share link for the QMath_Runs folder and send it to the primary researcher.
 
 Thank you for your contribution to the QMath project!
