@@ -52,7 +52,7 @@ REASONER_MODELS = [
 ]
 
 # -- File I/O & Script Behavior --
-NPUT_DIR = "data/with_quizzes/"
+INPUT_DIR = "data/with_quizzes/"
 OUTPUT_DETAILS_DIR = "results/details/"
 OUTPUT_OVERVIEW_DIR = "results/overview/"
 
