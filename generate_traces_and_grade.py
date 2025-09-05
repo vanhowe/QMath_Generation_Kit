@@ -197,6 +197,7 @@ def run_full_evaluation():
                         result_record = {
                             "problem_id": problem_id, "generator_model": trace_info["model_id"],
                             "generator_type": model_type, "trace_num": i + 1, "is_correct": is_correct,
+                            "ground_truth_answer": ground_truth_raw_str,
                             "extracted_answer": extracted_answer, "reward_score": reward_score,
                             "reason_trace": reason_trace, "grading_result": grading_result,
                         }
