@@ -40,10 +40,14 @@ pip install -r requirements.txt
 ```
 # Step 2: Prepare and Chunk the Dataset
 This script finds all raw Parquet files in data/raw/, filters them for problems with purely numeric answers, and saves the clean, standardized output into new chunk files in the data/processed/ directory.
+```
+huggingface-cli login
+```
+insert the token
 
 Run the script:
 ```
-python prepare_dataset.py
+python prepare_data.py
 ```
 # Step 3: Generate Quizzes for Each Chunk
 This script finds all the processed chunks from the previous step and generates a diagnostic quiz for each problem, saving the augmented chunks to data/with_quizzes/.
