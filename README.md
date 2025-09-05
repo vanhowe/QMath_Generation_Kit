@@ -1,103 +1,100 @@
-## QMath Generation Kit - Collaborator Guide
-# 1. Project Overview
-Welcome to the QMath project! This repository contains a suite of scripts to build a high-quality dataset for training mathematical reasoning models. The pipeline is designed to be run by a collaborator with access to a local GPU cluster.
+# QMath 数据处理与评估流程指南
+📌 概述
+本指南详细说明了从原始数据到最终评估结果的完整流程，包括数据预处理、测验生成、推理轨迹生成与评分等关键步骤。流程设计为模块化执行，支持分块处理以提高效率。
 
-Important Note on Large Datasets: This pipeline is designed to handle very large datasets by processing them as a series of individual .parquet files. This file-based chunking keeps memory usage low and makes the entire process robust and resumable.
+### 步骤1：预处理数据
+目标：从原始数据中提取纯数字答案的问题，生成标准化数据集
 
-The workflow is broken down into a clear directory structure and a series of scripts that must be run in order.
-
-Directory Structure
-Before you begin, ensure your repository has the following directory structure. You will need to create these folders.
+### 1. 登录 Hugging Face（仅首次需要）
 ```
-QMath-Generation-Kit/
-├── data/
-│   ├── raw/              <-- Place downloaded .parquet files here
-│   ├── processed/        <-- Script 1 (prepare) output goes here
-│   └── with_quizzes/     <-- Script 2 (quiz gen) output goes here
-├── results/
-│   ├── details/          <-- Script 3 (trace gen) output chunks go here
-│   └── overview/         <-- Script 3 summary goes here
-├── prepare_dataset.py      # Script 1
-├── generate_quizzes.py     # Script 2
-├── generate_traces_and_grade.py # Script 3
-├── deploy_local_models.sh
-...
-
+huggingface-cli login  # 输入您的 Hugging Face Token
 ```
-
-# 2. The Full 5-Step Workflow
-# Step 1: Initial Setup
-This step only needs to be done once.
-
-A. Download the Data:
-Manually download the open-r1/OpenR1-Math-220k dataset files. Place all the .parquet files (e.g., 0000.parquet, 0001.parquet, etc.) into the data/raw/ directory.
-
-B. Create a Python Environment:
-```
-python -m venv qmath_env
-source qmath_env/bin/activate
-pip install -r requirements.txt
-```
-# Step 2: Prepare and Chunk the Dataset
-This script finds all raw Parquet files in data/raw/, filters them for problems with purely numeric answers, and saves the clean, standardized output into new chunk files in the data/processed/ directory.
-```
-huggingface-cli login
-```
-insert the token
-
-Run the script:
+### 2. 运行预处理脚本
 ```
 python prepare_data.py
 ```
-# Step 3: Generate Quizzes for Each Chunk
-This script finds all the processed chunks from the previous step and generates a diagnostic quiz for each problem, saving the augmented chunks to data/with_quizzes/.
 
-A. Configure your API Key:
-Open generate_quizzes.py and fill in your commercial API key.
+输出文件
+data/processed/open_r1_math_data_original.jsonl	     原始中间数据	调试用（不参与后续流程）
+data/processed/open_r1_math_data_numeric_only.jsonl	     纯数字答案过滤后数据	核心输入文件（必须使用）
+⚠️ 重要说明：
 
-B. Run the script:
+仅 numeric_only 文件包含有效数据（过滤非数字答案问题）
+原始文件仅用于调试，切勿在后续步骤中使用
+
+### 步骤1.5：数据切分（关键新增步骤）
+目标：将大文件分割为小块，避免后续处理内存溢出
+
+### 运行切分脚本（必须在 prepare_data.py 后执行）
 ```
+python slice_jsonl.py
+```
+📂 输入/输出
+输入	data/processed/open_r1_math_data_numeric_only.jsonl	步骤1生成的过滤后数据
+输出	data/sliced/slice_{0..3}.jsonl	4个等分小文件（每块约25%数据）
+
+⚠️ 执行顺序警告：
+必须在 prepare_data.py 之后、generate_quizzes.py 之前运行！
+未切分数据将导致后续步骤内存崩溃
+
+### 步骤2：生成诊断测验
+目标：为每个数学问题生成诊断性测验（含错误选项）
+
+🔑 配置步骤
+编辑 generate_quizzes.py：
+
+必须配置项（第15行附近）
+TEACHER_API_KEY = "YOUR_API_KEY"  # 替换为您的模型API Key
+MODEL_ENDPOINT = "https://api.your-model.com/v1"  # 或本地模型地址
+
+ 输入路径（第22行）
+INPUT_DIR = "data/sliced"  # 指向切分后的数据目录
+
+### 🚀 执行命令
+'''
 python generate_quizzes.py
-```
-# Step 4: Generate and Score Traces
-This is the main data generation phase. It will process each quiz chunk sequentially.
+'''
 
-A. Deploy Local Models:
-Use the provided script to launch the local "peer" and "student" models on your cluster.
-```
+📂 输出
+生成文件：data/with_quizzes/slice_{0..3}_with_quizzes.jsonl
+每个文件包含原始问题 + 生成的4个选项 + 正确答案
+💡 提示：
+
+如果使用本地模型，确保模型服务已启动
+单次处理一个分块（脚本自动遍历4个切片）
+
+### 🧠 步骤4：生成与评分推理轨迹
+目标：用学生模型生成解题过程，并用评分模型评估质量
+
+🛠️ 选项A：启动本地模型（根据老师模型情况吧）
+# 赋予执行权限并运行
+'''
 chmod +x deploy_local_models.sh
 ./deploy_local_models.sh
-```
-B. Configure the Evaluation Script:
-Open generate_traces_and_grade.py, fill in your GRADER_API_KEY, and ensure the local API URLs are correct.
+'''
+启动两个本地模型服务：
+Student Model: Qwen 2.5 7B (http://localhost:8000)
+Peer Model: Qwen 2.5 72B (http://localhost:8001)
+🔑 选项B：配置评估脚本
+编辑 generate_traces_and_grade.py：
 
-C. Run the script:
-```
+第8行：评分模型配置
+GRADER_API_KEY = "YOUR_GRADING_KEY"  # 评分模型API Key
+
+第12行：本地模型地址（若使用本地服务）
+STUDENT_MODEL_URL = "http://localhost:8000/v1"
+PEER_MODEL_URL = "http://localhost:8001/v1"
+
+第18行：输入路径
+INPUT_DIR = "data/with_quizzes"  # 指向步骤2输出目录
+
+### 🚀 执行命令
+'''
 python generate_traces_and_grade.py
-```
-This will read from data/with_quizzes/ and save result chunks to results/details/.
+'''
+📂 输出
+详细结果：results/details/slice_{0..3}_details.jsonl
+包含字段：
 
-# Step 5: Merge and Upload Your Final Results (optional)
-A. Merge the Result Chunks:
-Combine all the detailed log chunks into a single file.
-```
-python merge_results.py
-```
-This creates final_merged_run_details.jsonl.
-
-B. Upload the Final Files:
-Use the aliyunpan-cli tool to upload the final merged details file and the final overview report.
-
-# Log in if you haven't already
-```
-aliyunpan login --refresh-token <YOUR_REFRESH_TOKEN_HERE>
-```
-# Upload your two output files
-```
-aliyunpan upload final_merged_run_details.jsonl QMath_Runs/
-aliyunpan upload run_overview_*.json QMath_Runs/
-```
-C. Share the Folder Link:
-Create a share link for the QMath_Runs folder and send it to the primary researcher.
-
-Thank you for your contribution to the QMath project!
+### 📤 步骤5：合并与上传结果（可选）
+目标：整合结果并上传至阿里云盘
