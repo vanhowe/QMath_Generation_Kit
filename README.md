@@ -43,9 +43,9 @@ python slice_jsonl.py
 🔑 配置步骤
 编辑 generate_quizzes.py：
 ### 🚀 执行命令
-'''
+```
 python generate_quizzes.py
-'''
+```
 
 📂 输出
 生成文件：data/with_quizzes/slice_{0..3}_with_quizzes.jsonl
