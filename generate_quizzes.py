@@ -6,21 +6,21 @@ from tqdm import tqdm
 from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor
 from prompts import QUIZ_GENERATION_PROMPT
-import glob
-import pandas as pd
 
 # --- Configuration ---
+# IMPORTANT: Replace with your actual API key
 COMMERCIAL_API_KEY = "YOUR_API_KEY_HERE" 
 COMMERCIAL_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 QUIZ_GENERATOR_MODEL = "deepseek-r1"
 
 # --- Script Behavior ---
-# This script reads from the 'processed' directory and writes to the 'with_quizzes' directory
-INPUT_DIR = "data/processed/"
-OUTPUT_DIR = "data/with_quizzes/"
-CONCURRENT_REQUESTS = 50 # set higher to faster 
+# This script now reads a single .jsonl file and writes to another .jsonl file
+# MODIFIED: Using the correct input file from the latest prepare_data.py
+INPUT_FILE = '/root/autodl-tmp/filtered_math_data_original_structure.jsonl'
+OUTPUT_FILE = '/root/autodl-tmp/math_data_with_quizzes.jsonl'
+CONCURRENT_REQUESTS = 50 
 
-# --- API Client and Helper Functions ---
+# --- API Client and Helper Functions (Unchanged) ---
 client = OpenAI(api_key=COMMERCIAL_API_KEY, base_url=COMMERCIAL_API_URL, max_retries=2)
 
 def call_llm_api(prompt, model_id, temperature=0.3):
@@ -47,15 +47,33 @@ def parse_json_from_text(text_blob: str):
             return None, f"JSON Decode Error: {e}"
     return None, "No JSON object found in response."
 
+# --- MODIFIED: This function is now corrected to match your data structure ---
 def process_single_problem(problem_data):
-    # This worker function is largely unchanged, but now works with a dictionary
     output_record = problem_data.copy()
-    reasoning_text = problem_data.get('gold_standard_reasoning')
     
-    if not reasoning_text:
+    # Gather reasoning text from both 'solution' and 'generations' fields
+    reasoning_sources = []
+    
+    # 1. Get the solution if it's high-quality (e.g., longer than 100 chars)
+    solution_text = problem_data.get('solution')
+    if solution_text and isinstance(solution_text, str) and len(solution_text) > 100:
+        reasoning_sources.append(solution_text)
+        
+    # 2. Get any high-quality generations
+    generations = problem_data.get('generations', [])
+    if generations and isinstance(generations, list):
+        for gen_text in generations:
+            if gen_text and isinstance(gen_text, str) and len(gen_text) > 100:
+                reasoning_sources.append(gen_text)
+
+    # If we found no good reasoning text anywhere, mark an error and return
+    if not reasoning_sources:
         output_record["quiz"] = None
-        output_record["error"] = "Input record was missing 'gold_standard_reasoning'."
+        output_record["error"] = "Record has no high-quality 'solution' or 'generations' to use."
         return output_record
+    
+    # Join the found traces into a single block of text for the prompt
+    reasoning_text = "\n\n---\n\n".join(reasoning_sources)
 
     quiz_gen_prompt = QUIZ_GENERATION_PROMPT.format(
         problem=problem_data.get('problem', 'N/A'),
@@ -78,6 +96,7 @@ def process_single_problem(problem_data):
 
     if "quiz" in quiz_json:
         output_record["quiz"] = quiz_json["quiz"]
+        output_record.pop("error", None) # Remove error key on success
     else:
         output_record["quiz"] = None
         output_record["error"] = "Validation Error: Parsed JSON is valid, but missing 'quiz' key."
@@ -85,48 +104,44 @@ def process_single_problem(problem_data):
     
     return output_record
 
-def generate_quizzes_in_chunks():
+# --- MODIFIED: Main function now processes the large file in memory-safe chunks ---
+def generate_quizzes_from_jsonl():
     """
-    Finds all pre-processed data chunks, generates quizzes for each,
-    and saves the output to corresponding new chunk files.
+    Reads a large .jsonl file in chunks to avoid memory errors, generates quizzes,
+    and saves the output to a new .jsonl file.
     """
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    input_chunk_files = sorted(glob.glob(os.path.join(INPUT_DIR, "*.parquet")))
-    
-    if not input_chunk_files:
-        print(f"FATAL: No .parquet files found in '{INPUT_DIR}'. Please run 'prepare_dataset.py' first.")
+    if not os.path.exists(INPUT_FILE):
+        print(f"FATAL: Input file not found at '{INPUT_FILE}'. Please run the data preparation script first.")
         return
 
-    print(f"Found {len(input_chunk_files)} data chunks to process.")
+    # To get a total for the progress bar, we can count the lines first
+    print("Counting total problems in input file...")
+    with open(INPUT_FILE, 'r', encoding='utf-8') as f:
+        total_problems = sum(1 for line in f)
+    
+    print(f"Found {total_problems} problems to process.")
 
-    for chunk_path in input_chunk_files:
-        print(f"\n--- Processing Chunk: {chunk_path} ---")
+    with ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS) as executor, \
+         open(INPUT_FILE, 'r', encoding='utf-8') as f_in, \
+         open(OUTPUT_FILE, 'w', encoding='utf-8') as f_out:
         
-        try:
-            df = pd.read_parquet(chunk_path)
-            # Convert DataFrame to list of dictionaries for processing
-            problems_to_process = df.to_dict(orient='records')
-        except Exception as e:
-            print(f"  - Error reading chunk file: {e}. Skipping.")
-            continue
+        # We use executor.map on the file object directly. This creates a generator.
+        # It reads one line, submits it to a worker thread, and moves to the next.
+        # This is highly memory-efficient.
+        problem_generator = (json.loads(line) for line in f_in)
+        
+        results_iterator = tqdm(
+            executor.map(process_single_problem, problem_generator),
+            total=total_problems,
+            desc="Generating Quizzes"
+        )
+        
+        # Write results to the output file as they are completed
+        print(f"Writing results to {OUTPUT_FILE}...")
+        for result in results_iterator:
+            f_out.write(json.dumps(result) + '\n')
 
-        with ThreadPoolExecutor(max_workers=CONCURRENT_REQUESTS) as executor:
-            results_iterator = tqdm(
-                executor.map(process_single_problem, problems_to_process),
-                total=len(problems_to_process),
-                desc=f"Generating Quizzes for {os.path.basename(chunk_path)}"
-            )
-            
-            # Convert results back to a DataFrame to save as Parquet
-            results_list = list(results_iterator)
-            output_df = pd.DataFrame(results_list)
-            
-            output_filename = os.path.join(OUTPUT_DIR, os.path.basename(chunk_path).replace('processed_numeric_data', 'data_with_quizzes'))
-            output_df.to_parquet(output_filename, index=False)
-
-        print(f"  - ✅ Finished processing chunk. Output saved to '{output_filename}'")
-
-    print("\nAll quiz generation chunks have been processed successfully!")
+    print(f"\n✅ Finished processing. Output saved to '{OUTPUT_FILE}'")
 
 if __name__ == "__main__":
-    generate_quizzes_in_chunks()
+    generate_quizzes_from_jsonl()
