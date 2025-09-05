@@ -7,18 +7,17 @@ from openai import OpenAI
 from concurrent.futures import ThreadPoolExecutor
 from prompts import QUIZ_GENERATION_PROMPT
 
-# --- Configuration ---
+# --- 需要老师改动Configuration ---
 # IMPORTANT: Replace with your actual API key
 COMMERCIAL_API_KEY = "YOUR_API_KEY_HERE" 
 COMMERCIAL_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 QUIZ_GENERATOR_MODEL = "deepseek-r1"
 
-# --- Script Behavior ---
+# --- 需要老师改动Script Behavior ---
 # This script now reads a single .jsonl file and writes to another .jsonl file
-# MODIFIED: Using the correct input file from the latest prepare_data.py
-INPUT_FILE = '/root/autodl-tmp/filtered_math_data_original_structure.jsonl'
-OUTPUT_FILE = '/root/autodl-tmp/math_data_with_quizzes.jsonl'
-CONCURRENT_REQUESTS = 50 
+INPUT_FILE = '/root/autodl-tmp/filtered_math_data_original_structure.jsonl' # 注意改写分块 00～04
+OUTPUT_FILE = '/root/autodl-tmp/math_data_with_quizzes_number.jsonl' # 注意改写分块 00～04
+CONCURRENT_REQUESTS = 50 # 同时发出api的次数
 
 # --- API Client and Helper Functions (Unchanged) ---
 client = OpenAI(api_key=COMMERCIAL_API_KEY, base_url=COMMERCIAL_API_URL, max_retries=2)
