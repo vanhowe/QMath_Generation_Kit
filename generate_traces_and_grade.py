@@ -10,7 +10,7 @@ from prompts import REASONING_PROMPT, QUIZ_GRADING_PROMPT
 
 # --- Configuration ---
 
-# -- API Endpoints & Keys (Collaborator MUST configure this section) --
+# -- API Endpoints & Keys (需要老师改写) --
 GRADER_API_URL = "YOUR_DEEPSEEK_V3_API_URL_HERE"
 GRADER_API_KEY = "YOUR_DEEPSEEK_API_KEY_HERE" 
 GRADER_MODEL = "deepseek-chat" # Ensure this is the correct model name
@@ -20,6 +20,16 @@ LOCAL_API_KEY_PEER = "EMPTY"
 
 LOCAL_API_URL_STUDENT = "http://localhost:8001/v1"
 LOCAL_API_KEY_STUDENT = "EMPTY"
+
+# --- 需要老师改写: File I/O & Script Behavior ---
+# The script now reads from the single JSONL file produced by the quiz generation step.
+INPUT_FILE = "/root/autodl-tmp/math_data_with_quizzes.jsonl"  # 需要改写，按照分块
+
+# Output will be organized by a timestamp for each run
+RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+OUTPUT_BASE_DIR = f"results/run_{RUN_TIMESTAMP}"
+OUTPUT_DETAILS_FILE = os.path.join(OUTPUT_BASE_DIR, "run_details.jsonl")
+OUTPUT_OVERVIEW_FILE = os.path.join(OUTPUT_BASE_DIR, "run_overview.json")
 
 # --- Portfolio of Reasoner Models ---
 # The script will use these configurations to generate new reasoning traces.
@@ -49,15 +59,6 @@ REASONER_MODELS = [
     }
 ]
 
-# --- MODIFIED: File I/O & Script Behavior ---
-# The script now reads from the single JSONL file produced by the quiz generation step.
-INPUT_FILE = "/root/autodl-tmp/math_data_with_quizzes.jsonl" 
-
-# Output will be organized by a timestamp for each run
-RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
-OUTPUT_BASE_DIR = f"results/run_{RUN_TIMESTAMP}"
-OUTPUT_DETAILS_FILE = os.path.join(OUTPUT_BASE_DIR, "run_details.jsonl")
-OUTPUT_OVERVIEW_FILE = os.path.join(OUTPUT_BASE_DIR, "run_overview.json")
 
 
 # --- IMPROVEMENT: Pre-initialize API clients for efficiency ---
