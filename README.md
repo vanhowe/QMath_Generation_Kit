@@ -60,10 +60,10 @@ python generate_quizzes.py
 
 🛠️ 启动本地模型（根据老师模型情况吧）
 # 赋予执行权限并运行
-'''
+```
 chmod +x deploy_local_models.sh
 ./deploy_local_models.sh
-'''
+```
 启动两个本地模型服务：
 Student Model: Qwen 2.5 7B (http://localhost:8000)
 Peer Model: Qwen 2.5 72B (http://localhost:8001)
@@ -74,9 +74,9 @@ Peer Model: Qwen 2.5 72B (http://localhost:8001)
 确保地址和小模型准备好
 
 ### 🚀 执行命令
-'''
+```
 python generate_traces_and_grade.py
-'''
+```
 📂 输出
 详细结果：results/details/slice_{0..3}_details.jsonl
 包含字段：
