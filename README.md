@@ -42,14 +42,6 @@ python slice_jsonl.py
 
 🔑 配置步骤
 编辑 generate_quizzes.py：
-
-必须配置项（第15行附近）
-TEACHER_API_KEY = "YOUR_API_KEY"  # 替换为您的模型API Key
-MODEL_ENDPOINT = "https://api.your-model.com/v1"  # 或本地模型地址
-
- 输入路径（第22行）
-INPUT_DIR = "data/sliced"  # 指向切分后的数据目录
-
 ### 🚀 执行命令
 '''
 python generate_quizzes.py
@@ -66,7 +58,7 @@ python generate_quizzes.py
 ### 🧠 步骤4：生成与评分推理轨迹
 目标：用学生模型生成解题过程，并用评分模型评估质量
 
-🛠️ 选项A：启动本地模型（根据老师模型情况吧）
+🛠️ 启动本地模型（根据老师模型情况吧）
 # 赋予执行权限并运行
 '''
 chmod +x deploy_local_models.sh
@@ -75,18 +67,11 @@ chmod +x deploy_local_models.sh
 启动两个本地模型服务：
 Student Model: Qwen 2.5 7B (http://localhost:8000)
 Peer Model: Qwen 2.5 72B (http://localhost:8001)
-🔑 选项B：配置评估脚本
+
+🔑 配置评估脚本
 编辑 generate_traces_and_grade.py：
 
-第8行：评分模型配置
-GRADER_API_KEY = "YOUR_GRADING_KEY"  # 评分模型API Key
-
-第12行：本地模型地址（若使用本地服务）
-STUDENT_MODEL_URL = "http://localhost:8000/v1"
-PEER_MODEL_URL = "http://localhost:8001/v1"
-
-第18行：输入路径
-INPUT_DIR = "data/with_quizzes"  # 指向步骤2输出目录
+确保地址和小模型准备好
 
 ### 🚀 执行命令
 '''
